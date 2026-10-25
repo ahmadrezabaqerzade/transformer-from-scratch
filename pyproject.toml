@@ -1,0 +1,21 @@
+[project]
+name = "transformer-from-scratch"
+version = "0.1.0"
+
+description = """
+Implementation of the Transformer architecture from scratch using PyTorch, with a focus on 
+understanding self-attention and the core building blocks."""
+
+readme = "README.md"
+authors = [
+    { name = "ahmadrezabaqerzade", email = "ahmadrezabaqerzadeh@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+license = "MIT"
+license-files = ["LICENSE"]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
