@@ -11,7 +11,10 @@ authors = [
     { name = "ahmadrezabaqerzade", email = "ahmadrezabaqerzadeh@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "numpy>=2.5.4",
+    "torch>=2.14.1",
+]
 license = "MIT"
 license-files = ["LICENSE"]
 
