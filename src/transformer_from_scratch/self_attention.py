@@ -1,6 +1,8 @@
+import math
+
 import torch
 from torch import nn
-import math 
+
 
 class SelfAttention(nn.Module):
     """
@@ -9,7 +11,7 @@ class SelfAttention(nn.Module):
 
     def __init__(self, d_model: int):
         super().__init__()
-        
+
         if isinstance(d_model, bool) or not isinstance(d_model, int):
             raise TypeError("d_model must be an integer.")
 
@@ -26,21 +28,22 @@ class SelfAttention(nn.Module):
         """
         Apply self-attention to input tensors of shape (B, T, D).
         """
-        
+
         if x.ndim != 3:
             raise ValueError(f"Expected input shape (B, T, D), got {tuple(x.shape)}.")
 
         if x.size(-1) != self.d_model:
-            raise ValueError(f"Expected input feature dimension {self.d_model}, "
-                             f"got {x.size(-1)}.")
+            raise ValueError(
+                f"Expected input feature dimension {self.d_model}, got {x.size(-1)}."
+            )
 
         key = self.key_proj(x)
         query = self.query_proj(x)
         value = self.value_proj(x)
 
         scores = query @ key.transpose(-2, -1)
-        scores = scores/math.sqrt(key.size(-1))
-        
+        scores = scores / math.sqrt(key.size(-1))
+
         weights = torch.softmax(scores, dim=-1)
         output = weights @ value
         return output

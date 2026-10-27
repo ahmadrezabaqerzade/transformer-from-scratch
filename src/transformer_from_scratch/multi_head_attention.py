@@ -1,6 +1,8 @@
+import math
+
 import torch
 from torch import nn
-import math
+
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model: int, nhead: int, dropout: float = 0.0) -> None:
@@ -20,8 +22,7 @@ class MultiHeadAttention(nn.Module):
 
         if nhead > d_model or d_model % nhead != 0:
             raise ValueError(
-                "nhead must not exceed d_model, and "
-                "d_model must be divisible by nhead."
+                "nhead must not exceed d_model, and d_model must be divisible by nhead."
             )
 
         self.d_model = d_model
@@ -32,19 +33,16 @@ class MultiHeadAttention(nn.Module):
         self.query_proj = nn.Linear(d_model, d_model)
         self.value_proj = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
-        
+
         self.final_proj = nn.Linear(d_model, d_model)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if x.ndim != 3:
-            raise ValueError(
-                f"Expected input shape (B, T, D), got {tuple(x.shape)}."
-            )
+            raise ValueError(f"Expected input shape (B, T, D), got {tuple(x.shape)}.")
 
         if x.size(-1) != self.d_model:
             raise ValueError(
-                f"Expected input feature dimension {self.d_model}, "
-                f"got {x.size(-1)}."
+                f"Expected input feature dimension {self.d_model}, got {x.size(-1)}."
             )
 
         B, T, D = x.shape
@@ -65,7 +63,8 @@ class MultiHeadAttention(nn.Module):
 
         return output
 
-    def split_heads(self, x: torch.Tensor, batch_size: int, seq_len: int) -> torch.Tensor:
+    def split_heads(
+        self, x: torch.Tensor, batch_size: int, seq_len: int
+    ) -> torch.Tensor:
         x = x.reshape(batch_size, seq_len, self.nhead, self.dh)
         return x.permute(0, 2, 1, 3)
-
