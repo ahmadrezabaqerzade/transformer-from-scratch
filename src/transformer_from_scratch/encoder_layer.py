@@ -21,7 +21,7 @@ class EncoderLayer(nn.Module):
         self.mha = MultiHeadAttention(d_model=d_model, nhead=nhead, dropout=dropout)
 
         self.feed_forward = FeedForward(
-            d_model=d_model, d_ff=d_ff, activation=activation
+            d_model=d_model, d_ff=d_ff, activation=activation, dropout=dropout
         )
 
         self.norm1 = LayerNorm(d_model=d_model, eps=eps)
