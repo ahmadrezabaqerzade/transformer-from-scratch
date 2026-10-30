@@ -107,7 +107,6 @@ def test_invalid_head_configuration(d_model: int, nhead: int) -> None:
         MultiHeadAttention(d_model=d_model, nhead=nhead)
 
 
-
 @pytest.mark.parametrize(
     "batch_size, seq_len, d_model, nhead",
     [
@@ -148,3 +147,21 @@ def test_gradient_flow() -> None:
         assert torch.isfinite(parameter.grad).all()
 
 
+def test_attention_mask():
+    attention = MultiHeadAttention(d_model=8, nhead=2)
+
+    x = torch.randn(2, 4, 8)
+
+    mask = torch.tensor(
+        [
+            [False, True, True, True],
+            [False, False, True, True],
+            [False, False, False, True],
+            [False, False, False, False],
+        ]
+    )
+
+    output = attention(x, attn_mask=mask)
+
+    assert output.shape == (2, 4, 8)
+    assert torch.isfinite(output).all()
