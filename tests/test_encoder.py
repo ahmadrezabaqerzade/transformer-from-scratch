@@ -1,16 +1,22 @@
 import pytest
-from transformer_from_scratch.encoder import Encoder
-from transformer_from_scratch.encoder_layer import EncoderLayer
 import torch
 
-@pytest.mark.parametrize("batch_size, seq_len, d_model, nhead, d_ff, num_layers", 
-                        [pytest.param(2, 32, 128, 4, 512, 1, id="1_layer_batch_2_seq32"),
-                         pytest.param(4, 16, 64, 8, 256, 2, id="2_layer_batch_4_seq16"),
-                         pytest.param(2, 32, 128, 4, 512, 3, id="3_layer_batch_2_seq32"), 
-                         pytest.param(2, 16, 16, 2, 64, 4, id="4_layer_batch_2_seq16")
-                         ])
-def test_output_shape(batch_size: int, seq_len: int, d_model: int, nhead: int, d_ff: int, 
-    num_layers: int) -> None:
+from transformer_from_scratch.encoder import Encoder
+from transformer_from_scratch.encoder_layer import EncoderLayer
+
+
+@pytest.mark.parametrize(
+    "batch_size, seq_len, d_model, nhead, d_ff, num_layers",
+    [
+        pytest.param(2, 32, 128, 4, 512, 1, id="1_layer_batch_2_seq32"),
+        pytest.param(4, 16, 64, 8, 256, 2, id="2_layer_batch_4_seq16"),
+        pytest.param(2, 32, 128, 4, 512, 3, id="3_layer_batch_2_seq32"),
+        pytest.param(2, 16, 16, 2, 64, 4, id="4_layer_batch_2_seq16"),
+    ],
+)
+def test_output_shape(
+    batch_size: int, seq_len: int, d_model: int, nhead: int, d_ff: int, num_layers: int
+) -> None:
     x = torch.rand(batch_size, seq_len, d_model)
     encoder_layer = EncoderLayer(d_model=d_model, nhead=nhead, d_ff=d_ff)
     encoder = Encoder(encoder_layer=encoder_layer, num_layers=num_layers)

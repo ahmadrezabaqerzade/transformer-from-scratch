@@ -96,14 +96,10 @@ class MultiHeadAttention(nn.Module):
                 )
 
             if attn_mask.device != query.device:
-                raise ValueError(
-                    "attn_mask must be on the same device as query."
-                )
+                raise ValueError("attn_mask must be on the same device as query.")
 
             if attn_mask.all(dim=-1).any():
-                raise ValueError(
-                    "attn_mask must not contain fully masked rows."
-                )
+                raise ValueError("attn_mask must not contain fully masked rows.")
 
         # Linear projections
         B, T, D = query.shape
