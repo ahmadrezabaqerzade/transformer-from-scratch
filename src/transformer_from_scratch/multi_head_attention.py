@@ -47,6 +47,7 @@ class MultiHeadAttention(nn.Module):
         query: torch.Tensor,
         key: torch.Tensor | None = None,
         value: torch.Tensor | None = None,
+        attn_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
 
         self._validate_input(query, "query")
@@ -78,6 +79,32 @@ class MultiHeadAttention(nn.Module):
             if query.device != key.device or key.device != value.device:
                 raise ValueError("query, key, and value must be on the same device.")
 
+        # Attention mask validation
+        if attn_mask is not None:
+            if not isinstance(attn_mask, torch.Tensor):
+                raise TypeError("attn_mask must be a torch.Tensor.")
+
+            if attn_mask.dtype != torch.bool:
+                raise TypeError("attn_mask must have dtype torch.bool.")
+
+            expected_shape = (query.size(1), key.size(1))
+
+            if attn_mask.shape != expected_shape:
+                raise ValueError(
+                    f"Expected attn_mask shape {expected_shape}, "
+                    f"got {tuple(attn_mask.shape)}."
+                )
+
+            if attn_mask.device != query.device:
+                raise ValueError(
+                    "attn_mask must be on the same device as query."
+                )
+
+            if attn_mask.all(dim=-1).any():
+                raise ValueError(
+                    "attn_mask must not contain fully masked rows."
+                )
+
         # Linear projections
         B, T, D = query.shape
 
@@ -93,6 +120,10 @@ class MultiHeadAttention(nn.Module):
         # Scaled Dot-Product Attention
         scores = query @ key.transpose(-2, -1)
         scores = scores / math.sqrt(self.dh)
+
+        # Apply attention mask
+        if attn_mask is not None:
+            scores = scores.masked_fill(attn_mask, float("-inf"))
 
         weights = torch.softmax(scores, dim=-1)
         weights = self.dropout(weights)
