@@ -5,7 +5,12 @@ from torch import nn
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model: int, nhead: int, dropout: float = 0.0) -> None:
+    def __init__(
+        self,
+        d_model: int,
+        nhead: int,
+        dropout: float = 0.0,
+    ) -> None:
         super().__init__()
 
         if isinstance(d_model, bool) or not isinstance(d_model, int):
@@ -32,39 +37,101 @@ class MultiHeadAttention(nn.Module):
         self.key_proj = nn.Linear(d_model, d_model)
         self.query_proj = nn.Linear(d_model, d_model)
         self.value_proj = nn.Linear(d_model, d_model)
+
         self.dropout = nn.Dropout(dropout)
 
         self.final_proj = nn.Linear(d_model, d_model)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if x.ndim != 3:
-            raise ValueError(f"Expected input shape (B, T, D), got {tuple(x.shape)}.")
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor | None = None,
+        value: torch.Tensor | None = None,
+    ) -> torch.Tensor:
 
-        if x.size(-1) != self.d_model:
+        self._validate_input(query, "query")
+
+        if (key is None) != (value is None):
             raise ValueError(
-                f"Expected input feature dimension {self.d_model}, got {x.size(-1)}."
+                "key and value must either both be provided or both be None."
             )
 
-        B, T, D = x.shape
+        # Self-Attention
+        if key is None and value is None:
+            key = query
+            value = query
 
-        key = self.split_heads(self.key_proj(x), B, T)
-        query = self.split_heads(self.query_proj(x), B, T)
-        value = self.split_heads(self.value_proj(x), B, T)
+        # Cross-Attention
+        else:
+            self._validate_input(key, "key")
+            self._validate_input(value, "value")
 
+            if query.size(0) != key.size(0):
+                raise ValueError("query and key must have the same batch size.")
+
+            if key.size(0) != value.size(0):
+                raise ValueError("key and value must have the same batch size.")
+
+            if key.size(1) != value.size(1):
+                raise ValueError("key and value must have the same sequence length.")
+
+            if query.device != key.device or key.device != value.device:
+                raise ValueError("query, key, and value must be on the same device.")
+
+        # Linear projections
+        B, T, D = query.shape
+
+        query = self.query_proj(query)
+        key = self.key_proj(key)
+        value = self.value_proj(value)
+
+        # Split into attention heads
+        query = self.split_heads(query)
+        key = self.split_heads(key)
+        value = self.split_heads(value)
+
+        # Scaled Dot-Product Attention
         scores = query @ key.transpose(-2, -1)
         scores = scores / math.sqrt(self.dh)
 
         weights = torch.softmax(scores, dim=-1)
         weights = self.dropout(weights)
+
         heads_output = weights @ value
 
+        # Concatenate heads
         output = heads_output.permute(0, 2, 1, 3).reshape(B, T, D)
+
+        # Final linear projection
         output = self.final_proj(output)
 
         return output
 
-    def split_heads(
-        self, x: torch.Tensor, batch_size: int, seq_len: int
-    ) -> torch.Tensor:
-        x = x.reshape(batch_size, seq_len, self.nhead, self.dh)
+    def split_heads(self, x: torch.Tensor) -> torch.Tensor:
+        batch_size, seq_len, _ = x.shape
+
+        x = x.reshape(
+            batch_size,
+            seq_len,
+            self.nhead,
+            self.dh,
+        )
+
         return x.permute(0, 2, 1, 3)
+
+    def _validate_input(
+        self,
+        x: torch.Tensor,
+        name: str,
+    ) -> None:
+
+        if not isinstance(x, torch.Tensor):
+            raise TypeError(f"{name} must be a torch.Tensor.")
+
+        if x.ndim != 3:
+            raise ValueError(f"{name} must have shape (B, T, D), got {tuple(x.shape)}.")
+
+        if x.size(-1) != self.d_model:
+            raise ValueError(
+                f"{name} must have feature dimension {self.d_model}, got {x.size(-1)}."
+            )
