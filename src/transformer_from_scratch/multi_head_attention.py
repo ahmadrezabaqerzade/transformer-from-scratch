@@ -48,6 +48,7 @@ class MultiHeadAttention(nn.Module):
         key: torch.Tensor | None = None,
         value: torch.Tensor | None = None,
         attn_mask: torch.Tensor | None = None,
+        key_padding_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
 
         self._validate_input(query, "query")
@@ -58,7 +59,7 @@ class MultiHeadAttention(nn.Module):
             )
 
         # Self-Attention
-        if key is None and value is None:
+        if key is None:
             key = query
             value = query
 
@@ -79,27 +80,18 @@ class MultiHeadAttention(nn.Module):
             if query.device != key.device or key.device != value.device:
                 raise ValueError("query, key, and value must be on the same device.")
 
+        device = query.device
         # Attention mask validation
         if attn_mask is not None:
-            if not isinstance(attn_mask, torch.Tensor):
-                raise TypeError("attn_mask must be a torch.Tensor.")
+            self._validate_mask(
+                attn_mask, (query.size(1), key.size(1)), "attn_mask", device
+            )
 
-            if attn_mask.dtype != torch.bool:
-                raise TypeError("attn_mask must have dtype torch.bool.")
-
-            expected_shape = (query.size(1), key.size(1))
-
-            if attn_mask.shape != expected_shape:
-                raise ValueError(
-                    f"Expected attn_mask shape {expected_shape}, "
-                    f"got {tuple(attn_mask.shape)}."
-                )
-
-            if attn_mask.device != query.device:
-                raise ValueError("attn_mask must be on the same device as query.")
-
-            if attn_mask.all(dim=-1).any():
-                raise ValueError("attn_mask must not contain fully masked rows.")
+        # Key padding mask validation
+        if key_padding_mask is not None:
+            self._validate_mask(
+                key_padding_mask, key.shape[:2], "key_padding_mask", device
+            )
 
         # Linear projections
         B, T, D = query.shape
@@ -120,6 +112,11 @@ class MultiHeadAttention(nn.Module):
         # Apply attention mask
         if attn_mask is not None:
             scores = scores.masked_fill(attn_mask, float("-inf"))
+
+        # Apply key padding mask
+        if key_padding_mask is not None:
+            key_padding_mask = key_padding_mask[:, None, None, :]
+            scores = scores.masked_fill(key_padding_mask, float("-inf"))
 
         weights = torch.softmax(scores, dim=-1)
         weights = self.dropout(weights)
@@ -162,3 +159,27 @@ class MultiHeadAttention(nn.Module):
             raise ValueError(
                 f"{name} must have feature dimension {self.d_model}, got {x.size(-1)}."
             )
+
+    def _validate_mask(
+        self,
+        mask: torch.Tensor,
+        expected_shape: tuple[int, ...],
+        name: str,
+        device: torch.device,
+    ) -> None:
+        if not isinstance(mask, torch.Tensor):
+            raise TypeError(f"{name} must be a torch.Tensor.")
+
+        if mask.dtype != torch.bool:
+            raise TypeError(f"{name} must have dtype torch.bool.")
+
+        if mask.shape != expected_shape:
+            raise ValueError(
+                f"Expected {name} shape {expected_shape}, got {tuple(mask.shape)}."
+            )
+
+        if mask.device != device:
+            raise ValueError(f"{name} must be on the same device as query.")
+
+        if mask.all(dim=-1).any():
+            raise ValueError(f"{name} must not contain fully masked rows.")
