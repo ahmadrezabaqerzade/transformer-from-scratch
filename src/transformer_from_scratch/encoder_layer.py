@@ -13,7 +13,7 @@ class EncoderLayer(nn.Module):
         d_ff: int,
         dropout: float = 0.1,
         activation: str = "relu",
-        eps: float = 1e-5,
+        layer_norm_eps: float = 1e-5,
     ):
         super().__init__()
 
@@ -25,8 +25,8 @@ class EncoderLayer(nn.Module):
             d_model=d_model, d_ff=d_ff, activation=activation, dropout=dropout
         )
 
-        self.norm1 = LayerNorm(d_model=d_model, eps=eps)
-        self.norm2 = LayerNorm(d_model=d_model, eps=eps)
+        self.norm1 = LayerNorm(d_model=d_model, eps=layer_norm_eps)
+        self.norm2 = LayerNorm(d_model=d_model, eps=layer_norm_eps)
 
         self.dropout = nn.Dropout(p=dropout)
 
