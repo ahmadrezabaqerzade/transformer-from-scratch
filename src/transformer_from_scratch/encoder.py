@@ -1,6 +1,6 @@
 import copy
 
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 from .encoder_layer import EncoderLayer
 from .positional_encoding import PositionalEncoding
@@ -26,11 +26,17 @@ class Encoder(nn.Module):
             [copy.deepcopy(encoder_layer) for _ in range(num_layers)]
         )
 
-    def forward(self, src: Tensor, src_mask: Tensor | None = None,
-                src_key_padding_mask: Tensor | None = None) -> Tensor:
+    def forward(
+        self,
+        src: Tensor,
+        src_mask: Tensor | None = None,
+        src_key_padding_mask: Tensor | None = None,
+    ) -> Tensor:
         src = self.positional_encoding(src)
 
         for layer in self.encoder:
-            src = layer(src=src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+            src = layer(
+                src=src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask
+            )
 
         return src
