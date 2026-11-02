@@ -1,5 +1,4 @@
-import torch
-from torch import nn
+from torch import nn, Tensor
 
 from .feed_forward import FeedForward
 from .layer_norm import LayerNorm
@@ -31,15 +30,19 @@ class EncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        attention_output = self.mha(x)
+    def forward(self, src: Tensor, src_mask: Tensor | None = None,
+                src_key_padding_mask: Tensor | None = None
+                ) -> Tensor:
+
+        attention_output = self.mha(query=src, attn_mask=src_mask, key_padding_mask=src_key_padding_mask)
         attention_output = self.dropout(attention_output)
 
-        normalized_x = self.norm1(x + attention_output)
+        normalized_src = self.norm1(src + attention_output)
 
-        feedforward_output = self.feed_forward(normalized_x)
+        feedforward_output = self.feed_forward(normalized_src)
         feedforward_output = self.dropout(feedforward_output)
 
-        final_output = self.norm2(normalized_x + feedforward_output)
+        final_output = self.norm2(normalized_src + feedforward_output)
 
         return final_output
+
