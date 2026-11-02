@@ -17,6 +17,8 @@ class DecoderLayer(nn.Module):
     ):
         super().__init__()
 
+        self.d_model = d_model
+
         self.self_attn = MultiHeadAttention(
             d_model=d_model, nhead=nhead, dropout=dropout
         )
