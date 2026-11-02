@@ -93,6 +93,9 @@ class MultiHeadAttention(nn.Module):
                 key_padding_mask, key.shape[:2], "key_padding_mask", device
             )
 
+        # Combined mask validation
+        self._validate_combined_masks(attn_mask, key_padding_mask)
+
         # Linear projections
         B, T, D = query.shape
 
@@ -181,5 +184,23 @@ class MultiHeadAttention(nn.Module):
         if mask.device != device:
             raise ValueError(f"{name} must be on the same device as query.")
 
-        if mask.all(dim=-1).any():
-            raise ValueError(f"{name} must not contain fully masked rows.")
+    def _validate_combined_masks(
+        self,
+        attn_mask: torch.Tensor | None,
+        key_padding_mask: torch.Tensor | None,
+    ) -> None:
+
+        if attn_mask is None and key_padding_mask is None:
+            return
+
+        if attn_mask is None:
+            combined_mask = key_padding_mask.unsqueeze(1)
+
+        elif key_padding_mask is None:
+            combined_mask = attn_mask.unsqueeze(0)
+
+        else:
+            combined_mask = attn_mask.unsqueeze(0) | key_padding_mask.unsqueeze(1)
+
+        if combined_mask.all(dim=-1).any():
+            raise ValueError("Combined attention masks must not fully mask any query.")
